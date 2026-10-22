@@ -161,3 +161,35 @@ def listar_auditorias(
     if id_sospecha:
         q = q.filter(Auditoria.id_sospecha == id_sospecha)
     return q.order_by(Auditoria.fecha_auditoria.desc()).all()
+
+# -- Screening real AML/PEP (OpenSanctions / OFAC SDN) ------------
+
+from pydantic import BaseModel, Field
+
+from .. import screening
+
+
+class ScreeningRequest(BaseModel):
+    nombre: str = Field(min_length=3, max_length=200, description="Nombre completo a consultar")
+    limite: int = Field(default=5, ge=1, le=20)
+
+
+@router.post("/screenings")
+def consultar_screening(payload: ScreeningRequest):
+    """Consulta sanciones/PEP por nombre contra OpenSanctions (si hay API key)
+    o contra la lista OFAC SDN oficial del Tesoro de EE.UU. (sin credenciales)."""
+    try:
+        return screening.screen(payload.nombre, payload.limite)
+    except screening.ScreeningError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+
+@router.get("/screenings/estado")
+def estado_screening():
+    from ..config import settings
+
+    return {
+        "proveedor": "OpenSanctions API" if settings.opensanctions_api_key else "OFAC SDN (respaldo oficial)",
+        "opensanctions_configurado": bool(settings.opensanctions_api_key),
+        "fuente_sin_credenciales": "https://www.treasury.gov/ofac/downloads/sdn.csv",
+    }
