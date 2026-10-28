@@ -86,3 +86,19 @@ class Auditoria(Base):
     )
 
     sospechosa = relationship("TransaccionSospechosa", back_populates="auditorias")
+
+
+class TransaccionMonitoreada(Base):
+    """Copia de solo lectura de cada transferencia completada (llega por el evento
+    transfer.completed). Es la base de los indicadores y del monitoreo AML, sin
+    consultar la base del Ledger."""
+
+    __tablename__ = "transaccion_monitoreada"
+
+    id_transferencia = Column(UUID(as_uuid=True), primary_key=True)
+    id_cuenta_origen = Column(UUID(as_uuid=True), nullable=False)
+    monto = Column(Numeric(14, 2), nullable=False)
+    fecha_transaccion = Column(DateTime, server_default=func.now(), nullable=False)
+    marcada = Column(String(5), nullable=False, default="no")
+
+    __table_args__ = (Index("idx_monitoreada_fecha", "fecha_transaccion"),)

@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .database import Base, engine, get_db
 from .models import ReporteRegulatorio, TransaccionSospechosa, Auditoria
-from .routers import compliance
+from .consumer import start_consumer, stop_consumer
+from .routers import analytics, compliance
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(settings.service_name)
@@ -18,8 +19,10 @@ logger = logging.getLogger(settings.service_name)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    start_consumer()
     logger.info("%s iniciado en puerto %d", settings.service_name, settings.api_port)
     yield
+    stop_consumer()
 
 
 app = FastAPI(
@@ -37,6 +40,7 @@ app.add_middleware(
 )
 
 app.include_router(compliance.router)
+app.include_router(analytics.router)
 
 
 @app.get("/health", tags=["infra"])

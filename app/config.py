@@ -19,4 +19,16 @@ class Settings(BaseSettings):
         default=None, validation_alias="OPEN_SANCTIONS_API_KEY"
     )
 
+    # Resolucion del titular de una cuenta (REST sincrono hacia account-service)
+    account_service_url: str = "http://account-service:8002"
+
+    # Regla AML: toda transferencia igual o superior a este monto se marca para revision
+    aml_umbral_monto: float = 10_000_000.0
+
+    # Bus de eventos (RabbitMQ). Apagado por defecto: se activa con ENABLE_CONSUMER=true.
+    rabbitmq_url: str = "amqp://banklite:banklite@rabbitmq:5672/"
+    events_exchange: str = "banklite.events"
+    events_queue: str = "compliance.events"
+    enable_consumer: bool = False
+
 settings = Settings()
