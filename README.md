@@ -91,6 +91,25 @@ uvicorn app.main:app --reload --port 8008
 
 Prueba: abre <http://localhost:8008/docs>.
 
+## Pruebas automatizadas
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests -v --cov=app --cov-report=term-missing --cov-report=html
+```
+
+No necesitan PostgreSQL, RabbitMQ ni los otros microservicios: la base es SQLite en memoria y las dependencias externas se reemplazan con mocks (`unittest.mock`). El reporte navegable queda en `htmlcov/index.html`.
+
+| Tipo | Archivo | Que verifica |
+|---|---|---|
+| Unitaria (mocks) | `tests/unit/test_screening.py` | Screening de sanciones/PEP: normalizacion de nombres, coincidencias contra la lista OFAC, cache, respaldo cuando OpenSanctions falla (`httpx` simulado). |
+| Integracion | `tests/integration/test_eventos_aml.py` | Evento `transfer.completed` -> regla AML por monto -> tablas `transaccion_monitoreada` y `transaccion_sospechosa`; idempotencia; evento `fraud.alert`. |
+| Integracion | `tests/integration/test_compliance_api.py` | Reportes regulatorios, transacciones sospechosas, auditorias, screening e indicadores calculados desde la base. |
+
+Resultado actual: **28 pruebas** (12 unitarias y 16 de integracion), todas aprobadas, con **90 % de cobertura** de `app/`.
+
+En GitHub Actions las pruebas corren en cada `push` y `pull request`. Si una falla, la imagen no se construye y no se despliega. El reporte de cobertura queda en el resumen de la ejecucion y como artefacto descargable `coverage-banklite-compliance-service`.
+
 ## Repositorios del proyecto
 
 `banklite-identity-service`, `banklite-account-service`, `banklite-ledger-service`, `banklite-transfer-service`, `banklite-card-service`, `banklite-fraud-service`, `banklite-notification-service`, `banklite-compliance-service`. Panel web: `services/web-panel` en el repositorio `banklite-microservicios`.
